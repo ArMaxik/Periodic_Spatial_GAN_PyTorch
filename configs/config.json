@@ -1,0 +1,23 @@
+{
+    "exp_name": "Progressive_GAN_11",
+    "weights": "out/Progressive_GAN_08/c_gen.pth",
+    "conv_channels": [512, 256, 128, 64, 3],
+    "local_noise_dim" : 40,
+    "global_noise_dim" : 20,
+    "periodic_noise_dim" : 4,
+    "hidden_noise_dim" : 60,
+    "kernel_size" : 4,
+    "spatial_size" : 6,
+
+
+    
+    "batch": 25,
+    "epochs" : 1000,
+    "lr_d" : 0.0003,
+    "lr_g" : 0.0003,
+    "eps_drift" : 0.001,
+    "g_it" : 1,
+    "d_it" : 1,
+    "b1" : 0.0,
+    "b2" : 0.99
+}
