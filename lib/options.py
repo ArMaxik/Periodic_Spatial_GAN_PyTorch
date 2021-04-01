@@ -1,5 +1,6 @@
 import json
 import torch
+import os
 
 class options:
     def __init__(self, args):
@@ -19,6 +20,9 @@ class options:
             setattr(self, "device", torch.device("cpu"))
         # Number of devices
         setattr(self, "num_devices", len(args.device_ids))
+        # Training folder
+        save_folder = os.path.join(self.out_folder, self.exp_name)
+        setattr(self, "work_folder", save_folder)
 
     # TODO: options dump
     def dump(self):

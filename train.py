@@ -1,5 +1,6 @@
 from lib.options import options
-from lib.network import PSGAN_Generator, PSGAN_Discriminator
+from lib.model import PSGAN
+from lib.misc import prep_dirs
 import argparse
 
 
@@ -12,8 +13,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     opt = options(args)
-    PSGAN_Generator(opt)
-    PSGAN_Discriminator(opt)
-
     opt.show()
+    prep_dirs(opt)
+
+    psgan = PSGAN(opt)
+
+    # Z_l, Z_g  = psgan.generate_noise(opt.batch_size)
+    # print(Z_l.shape, Z_g.shape)
+
+    psgan.train()
 

@@ -15,18 +15,20 @@ class Z_pereodic_gen(nn.Module):
         self.l2 = nn.Linear(in_features=self.opt.hidden_noise_dim, out_features=self.opt.periodic_noise_dim)
 
     def forward(self, Z_g):
+        current_batch_size = Z_g.shape[0]
+        Z_g = Z_g[:,:,0, 0].view(current_batch_size, self.opt.global_noise_dim)
         x = self.l(Z_g)
         x = F.relu(x)
         K1 = self.l1(x)
         K2 = self.l2(x)
 
-        Z_p = torch.zeros(self.opt.batch_size, self.periodic_noise_dim, self.spatial_size, self.spatial_size)
+        Z_p = torch.zeros(current_batch_size, self.opt.periodic_noise_dim, self.opt.spatial_size, self.opt.spatial_size, device=self.opt.device)
         # I think it can be better
         for l in range(self.opt.spatial_size):
             for m in range(self.opt.spatial_size):
-                Z_p[:, :, l, m] = k1*l + k2*m
+                Z_p[:, :, l, m] = K1*l + K2*m
 
-        phi = torch.rand(self.opt.batch_size, self.opt.periodic_noise_dim, 1, 1) * 2.0 * math.pi
+        phi = torch.rand(current_batch_size, self.opt.periodic_noise_dim, 1, 1, device=self.opt.device) * 2.0 * math.pi
         Z_p = torch.sin(Z_p + phi)
 
         return Z_p
@@ -55,12 +57,11 @@ class PSGAN_Generator(nn.Module):
 
     def forward(self, Z_l, Z_g):
         assert Z_l.shape[1] == self.opt.local_noise_dim
-        assert Z_l.shape[2] == self.opt.local_noise_dim
         assert Z_g.shape[1] == self.opt.global_noise_dim
         # Z pereodic
         Z_p = self.z_p_gen(Z_g)
         # Summarized Z
-        Z = torch.cat((Z, Z_p), dim=1)
+        Z = torch.cat((Z_l, Z_g, Z_p), dim=1)
 
         x = self.gen(Z)
         return x
@@ -89,5 +90,5 @@ class PSGAN_Discriminator(nn.Module):
 
     def forward(self, x):
         x = self.dis(x)
-        x = x.view(self.opt.batch_size, -1)
+        x = x.view(x.shape[0], -1)
         return x

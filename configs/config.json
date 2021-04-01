@@ -1,5 +1,6 @@
 {
     "exp_name": "PSGAN_01",
+    "out_folder": "./out",
     "weights": "",
     "gen_conv_channels": [512, 256, 128, 64, 3],
     "dis_conv_channels": [3, 64, 128, 256, 512, 1],
@@ -10,12 +11,13 @@
     "kernel_size": 4,
     "spatial_size": 6,
 
+    "dataset": "/raid/veliseev/datasets/dtd/images/",
+    "image_list": "./train_names.txt",
 
-    
     "batch_size": 25,
-    "epochs": 1000,
-    "lr_d": 0.0003,
-    "lr_g": 0.0003,
+    "epochs": 10000,
+    "lr_d": 5e-5,
+    "lr_g": 2e-4,
     "g_it": 1,
     "d_it": 1,
     "b1": 0.5,
