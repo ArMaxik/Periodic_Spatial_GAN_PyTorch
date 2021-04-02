@@ -3,18 +3,44 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# TODO: weight init
-
-class Z_pereodic_gen(nn.Module):
+class PSGAN_Generator(nn.Module):
     def __init__(self, opt):
-        super(Z_pereodic_gen, self).__init__()
+        super(PSGAN_Generator, self).__init__()
         self.opt = opt
+        noise_dim = self.opt.local_noise_dim + self.opt.global_noise_dim + self.opt.periodic_noise_dim
 
+        # Z_p generator
         self.l = nn.Linear(in_features=self.opt.global_noise_dim, out_features=self.opt.hidden_noise_dim)
         self.l1 = nn.Linear(in_features=self.opt.hidden_noise_dim, out_features=self.opt.periodic_noise_dim)
         self.l2 = nn.Linear(in_features=self.opt.hidden_noise_dim, out_features=self.opt.periodic_noise_dim)
 
-    def forward(self, Z_g):
+        # Generator layers
+        layers = []
+        # Repiting layers
+        for in_c, out_c in zip([noise_dim] + self.opt.gen_conv_channels[:-2], self.opt.gen_conv_channels[:-1]):
+            layers.append(nn.ConvTranspose2d(in_channels=in_c, out_channels=out_c, kernel_size=self.opt.kernel_size, stride=2, padding=1))
+            layers.append(nn.BatchNorm2d(out_c))
+            layers.append(nn.ReLU())
+        # Last layer
+        layers.append(nn.ConvTranspose2d(in_channels=self.opt.gen_conv_channels[-2], out_channels=self.opt.gen_conv_channels[-1], kernel_size=self.opt.kernel_size, stride=2, padding=1))
+        layers.append(nn.Tanh())
+
+        self.gen = nn.Sequential(*layers)
+
+        self.apply(weights_init)
+
+    def forward(self, Z_l, Z_g):
+        assert Z_l.shape[1] == self.opt.local_noise_dim
+        assert Z_g.shape[1] == self.opt.global_noise_dim
+        # Z pereodic
+        Z_p = self._z_p_gen(Z_g)
+        # Summarized Z
+        Z = torch.cat((Z_l, Z_g, Z_p), dim=1)
+
+        x = self.gen(Z)
+        return x
+
+    def _z_p_gen(self, Z_g):
         current_batch_size = Z_g.shape[0]
         Z_g = Z_g[:,:,0, 0].view(current_batch_size, self.opt.global_noise_dim)
         x = self.l(Z_g)
@@ -32,39 +58,6 @@ class Z_pereodic_gen(nn.Module):
         Z_p = torch.sin(Z_p + phi)
 
         return Z_p
-
-class PSGAN_Generator(nn.Module):
-    def __init__(self, opt):
-        super(PSGAN_Generator, self).__init__()
-        self.opt = opt
-        noise_dim = self.opt.local_noise_dim + self.opt.global_noise_dim + self.opt.periodic_noise_dim
-
-        # Z_p generator
-        self.z_p_gen = Z_pereodic_gen(opt)
-
-        # Generator layers
-        layers = []
-        # Repiting layers
-        for in_c, out_c in zip([noise_dim] + self.opt.gen_conv_channels[:-2], self.opt.gen_conv_channels[:-1]):
-            layers.append(nn.ConvTranspose2d(in_channels=in_c, out_channels=out_c, kernel_size=self.opt.kernel_size, stride=2, padding=1))
-            layers.append(nn.BatchNorm2d(out_c))
-            layers.append(nn.ReLU())
-        # Last layer
-        layers.append(nn.ConvTranspose2d(in_channels=self.opt.gen_conv_channels[-2], out_channels=self.opt.gen_conv_channels[-1], kernel_size=self.opt.kernel_size, stride=2, padding=1))
-        layers.append(nn.Tanh())
-
-        self.gen = nn.Sequential(*layers)
-
-    def forward(self, Z_l, Z_g):
-        assert Z_l.shape[1] == self.opt.local_noise_dim
-        assert Z_g.shape[1] == self.opt.global_noise_dim
-        # Z pereodic
-        Z_p = self.z_p_gen(Z_g)
-        # Summarized Z
-        Z = torch.cat((Z_l, Z_g, Z_p), dim=1)
-
-        x = self.gen(Z)
-        return x
 
 class PSGAN_Discriminator(nn.Module):
     def __init__(self, opt):
@@ -88,7 +81,21 @@ class PSGAN_Discriminator(nn.Module):
 
         self.dis = nn.Sequential(*layers)
 
+        self.apply(weights_init)
+
     def forward(self, x):
         x = self.dis(x)
         x = x.view(x.shape[0], -1)
         return x
+
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0.0)
+    elif classname.find('Linear') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        c = torch.rand(1).item()*math.pi
+        nn.init.normal_(m.bias.data, 0.0, 0.02*c)

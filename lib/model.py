@@ -142,7 +142,7 @@ class PSGAN():
         imgs_fake = self.gen(Z_l, Z_g)
         # Calculate gradient
         g_fake_out = self.dis(imgs_fake)
-        self.g_loss = self.criterion(g_fake_out, self.fake_label)
+        self.g_loss = self.criterion(g_fake_out, self.real_label)
 
         self.g_loss.backward()
         # Optimize weights
