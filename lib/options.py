@@ -18,6 +18,8 @@ class options:
                 setattr(self, "device", torch.device(f"cuda:{args.device_ids[0]}"))
         else:
             setattr(self, "device", torch.device("cpu"))
+        # Device ids
+        setattr(self, "device_ids", args.device_ids)
         # Number of devices
         setattr(self, "num_devices", len(args.device_ids))
         # Training folder

@@ -21,7 +21,10 @@ class PSGAN():
 
         self.gen = PSGAN_Generator(self.opt).to(self.opt.device)
         self.dis = PSGAN_Discriminator(self.opt).to(self.opt.device)
-        # TODO: add DataParallel
+        # DataParallel
+        if self.opt.num_devices > 1:
+            self.gen = nn.DataParallel(self.gen, device_ids=self.opt.device_ids)
+            self.dis = nn.DataParallel(self.dis, device_ids=self.opt.device_ids)
 
 
     def train(self):
@@ -29,7 +32,6 @@ class PSGAN():
         self._setup_train()
 
         # tqdm with fixed lenght to prevent resizing glitch
-        # self.pbar = tqdm(bar_format='{l_bar}{bar:50}{r_bar}{bar:-10b}')
         epochs = tqdm(range(self.opt.epochs), ncols=100, desc="train")
 
         for epoch in epochs:

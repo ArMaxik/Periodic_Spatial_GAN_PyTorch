@@ -48,13 +48,13 @@ class PSGAN_Generator(nn.Module):
         K1 = self.l1(x)
         K2 = self.l2(x)
 
-        Z_p = torch.zeros(current_batch_size, self.opt.periodic_noise_dim, self.opt.spatial_size, self.opt.spatial_size, device=self.opt.device)
+        Z_p = torch.zeros(current_batch_size, self.opt.periodic_noise_dim, self.opt.spatial_size, self.opt.spatial_size, device=Z_g.device)
         # I think it can be better
         for l in range(self.opt.spatial_size):
             for m in range(self.opt.spatial_size):
                 Z_p[:, :, l, m] = K1*l + K2*m
 
-        phi = torch.rand(current_batch_size, self.opt.periodic_noise_dim, 1, 1, device=self.opt.device) * 2.0 * math.pi
+        phi = torch.rand(current_batch_size, self.opt.periodic_noise_dim, 1, 1, device=Z_g.device) * 2.0 * math.pi
         Z_p = torch.sin(Z_p + phi)
 
         return Z_p

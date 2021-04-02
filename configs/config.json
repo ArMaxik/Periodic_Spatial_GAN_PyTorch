@@ -1,5 +1,5 @@
 {
-    "exp_name": "PSGAN_01",
+    "exp_name": "PSGAN_02",
     "out_folder": "./out",
     "weights": "",
     "gen_conv_channels": [512, 256, 128, 64, 3],
