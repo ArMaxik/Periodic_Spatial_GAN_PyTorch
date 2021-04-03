@@ -74,7 +74,7 @@ class PSGAN_Discriminator(nn.Module):
             layers.append(nn.LeakyReLU(negative_slope=0.2))
         # Remove first BN
         # TODO: Do we really need this?
-        layers.pop(1)
+        # layers.pop(1)
         # Last layer
         layers.append(nn.Conv2d(in_channels=self.opt.dis_conv_channels[-2], out_channels=self.opt.dis_conv_channels[-1], kernel_size=self.opt.kernel_size, stride=2, padding=1))
         layers.append(nn.Sigmoid())

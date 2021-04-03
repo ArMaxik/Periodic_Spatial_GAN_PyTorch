@@ -16,7 +16,7 @@ def print_error(e):
     print(e)
 
 class DTDDataLoader(data.Dataset):
-    def __init__(self, data_root, img_list_path="train.txt", transform=None):
+    def __init__(self, data_root, img_list_path="train.txt", transform=None, batch_size=1):
         """
             args:
                 data_root: str
@@ -38,6 +38,7 @@ class DTDDataLoader(data.Dataset):
         """
         self.transform = transform
         self.images = []
+        self.batch_size = batch_size
 
         # read texture names
         with open(os.path.join(img_list_path), "r") as file:
@@ -62,7 +63,11 @@ class DTDDataLoader(data.Dataset):
                     #print_error(e)
                     tqdm.write("pass {}".format(img_name))
                 #break
-
+        loaded_len = len(self.images)
+        i = 0
+        while len(self.images) < self.batch_size:
+            self.images.append(self.images[i])
+            i = (i + 1) % loaded_len
 
         self.data_num = len(self.images)
 
@@ -147,7 +152,8 @@ def get_dtd_data_loader(args, img_size):
     dataset_args = [
                     args.dataset,
                     args.image_list,
-                    transform
+                    transform,
+                    args.batch_size
                 ]
 
     return DTDDataLoader(*dataset_args)

@@ -1,5 +1,5 @@
 {
-    "exp_name": "PSGAN_02",
+    "exp_name": "PSGAN_05",
     "out_folder": "./out",
     "weights": "",
     "gen_conv_channels": [512, 256, 128, 64, 3],
@@ -15,9 +15,9 @@
     "image_list": "./train_names.txt",
 
     "batch_size": 25,
-    "epochs": 10000,
-    "lr_d": 5e-5,
-    "lr_g": 2e-4,
+    "epochs": 40000,
+    "lr_d": 0.0002,
+    "lr_g": 0.0002,
     "g_it": 1,
     "d_it": 1,
     "b1": 0.5,

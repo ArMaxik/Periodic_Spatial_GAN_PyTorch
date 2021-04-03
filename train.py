@@ -1,6 +1,8 @@
 from lib.options import options
 from lib.model import PSGAN
-from lib.misc import prep_dirs
+from lib.misc import prep_dirs, make_video
+
+import os
 import argparse
 
 
@@ -18,8 +20,8 @@ if __name__ == '__main__':
 
     psgan = PSGAN(opt)
 
-    # Z_l, Z_g  = psgan.generate_noise(opt.batch_size)
-    # print(Z_l.shape, Z_g.shape)
-
     psgan.train()
+
+    make_video(os.path.join(opt.work_folder, "progress"), opt.work_folder, opt.exp_name)
+
 

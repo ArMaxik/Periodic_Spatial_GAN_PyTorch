@@ -90,8 +90,8 @@ class PSGAN():
 
     def generate_noise(self, batch_size):
         # TODO: Z_l seems like not right thing
-        Z_l = torch.rand((batch_size, self.opt.local_noise_dim, self.opt.spatial_size, self.opt.spatial_size), device=self.opt.device)
-        Z_g = torch.rand((batch_size, self.opt.global_noise_dim, 1, 1), device=self.opt.device)
+        Z_l = torch.rand((batch_size, self.opt.local_noise_dim, self.opt.spatial_size, self.opt.spatial_size), device=self.opt.device) * 2.0 - 1.0
+        Z_g = torch.rand((batch_size, self.opt.global_noise_dim, 1, 1), device=self.opt.device) * 2.0 - 1.0
         pad = (
             self.opt.spatial_size // 2 - 1 + self.opt.spatial_size % 2,
             self.opt.spatial_size // 2,
