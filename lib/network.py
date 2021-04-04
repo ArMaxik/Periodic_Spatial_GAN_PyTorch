@@ -39,18 +39,33 @@ class PSGAN_Generator(nn.Module):
             layers.append(nn.LeakyReLU(negative_slope=0.2))
         # layers.pop(1)
         # Last layer
-        layers.append(nn.Conv2d(in_channels=self.opt.dis_conv_channels[-2], out_channels=self.opt.local_noise_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1))
+        layers.append(nn.Conv2d(in_channels=self.opt.dis_conv_channels[-2], out_channels=self.opt.global_noise_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1))
+        layers.append(nn.BatchNorm2d(self.opt.global_noise_dim))
+        layers.append(nn.LeakyReLU(negative_slope=0.2))
+        layers.append(nn.Conv2d(in_channels=self.opt.global_noise_dim, out_channels=self.opt.global_noise_dim, kernel_size=self.opt.spatial_size, stride=1, padding=0))
+        # self.cod_l = nn.Linear(in_features=self.opt.global_noise_dim * self.opt.spatial_size * self.opt.spatial_size, out_features = self.opt.global_noise_dim)
         layers.append(nn.Tanh())
 
         self.cod = nn.Sequential(*layers)
 
-    def forward(self, imgs, Z_g):
-        # assert Z_l.shape[1] == self.opt.local_noise_dim
-        assert Z_g.shape[1] == self.opt.global_noise_dim
+    def _expand_Z_g(self, Z_g):
+        pad = (
+            self.opt.spatial_size // 2 - 1 + self.opt.spatial_size % 2,
+            self.opt.spatial_size // 2,
+            self.opt.spatial_size // 2 - 1 + self.opt.spatial_size % 2,
+            self.opt.spatial_size // 2
+        )
+        Z_g = F.pad(Z_g, pad, mode='replicate')
+        return Z_g
+
+    def forward(self, Z_l, imgs):
+        assert Z_l.shape[1] == self.opt.local_noise_dim
+        # assert Z_g.shape[1] == self.opt.global_noise_dim
         # Z local
-        Z_l = self.cod(imgs)
-        # if Z_l.shape[1] != self.opt.local_noise_dim:
-        #     Z_l = Z_l.expand(-1, self.opt.local_noise_dim, -1, -1)
+        # Z_l = self.cod(imgs)
+        # Z global
+        Z_g = self.cod(imgs)
+        Z_g = self._expand_Z_g(Z_g)
         # Z pereodic
         Z_p = self._z_p_gen(Z_g)
         # Summarized Z

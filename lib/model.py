@@ -71,7 +71,7 @@ class PSGAN():
         )
         tmp_loader = iter(tmp_loader)
         # self.fixed_noise = self.generate_noise(36)
-        self.fixed_noise = (next(tmp_loader).to(self.opt.device), self.generate_noise(36)[1])
+        self.fixed_noise = (self.generate_noise(36)[0], next(tmp_loader).to(self.opt.device))
 
     def _make_stat(self, epoch):
         # Save progress image
@@ -136,7 +136,7 @@ class PSGAN():
         ### Train with fake images
         # Generate fake images
         Z_l, Z_g = self.generate_noise(self.current_batch)
-        imgs_fake = self.gen(self.data_device, Z_g)
+        imgs_fake = self.gen(Z_l, self.data_device)
         # Calculate gradient
         d_fake_out = self.dis(imgs_fake)
         d_fake_loss = self.criterion(d_fake_out, self.fake_label)
@@ -152,7 +152,7 @@ class PSGAN():
         self.op_gen.zero_grad()
         # Generate fake images
         Z_l, Z_g = self.generate_noise(self.current_batch)
-        imgs_fake = self.gen(self.data_device, Z_g)
+        imgs_fake = self.gen(Z_l, self.data_device)
         # Calculate gradient
         g_fake_out = self.dis(imgs_fake)
         self.g_loss = self.criterion(g_fake_out, self.real_label)
