@@ -27,7 +27,7 @@ class Texture_generator():
         self.gen.to(self.opt.device)
 
     def generate(self, spatial_size):
-        Z_l, Z_g = self.generate_noise(1, spatial_size)
+        Z_l, Z_g = self.generate_noise(self.opt.batch_size, spatial_size)
         img = self.gen(Z_l, Z_g).detach().cpu()
         return img
 
