@@ -129,4 +129,4 @@ def weights_init(m):
     elif classname.find('Linear') != -1:
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         c = torch.rand(1).item()*math.pi
-        nn.init.normal_(m.bias.data, 0.0, 0.02*c)
+        nn.init.normal_(m.bias.data, c, 0.02*c)

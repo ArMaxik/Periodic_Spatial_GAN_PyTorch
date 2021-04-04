@@ -12,7 +12,7 @@ DATA_PATH = "/raid/veliseev/datasets/dtd/images/"
 class small_opt:
     def __init__(self):
         self.dataset = "/raid/veliseev/datasets/dtd/images/"
-        self.image_list = "/raid/veliseev/dev/psgan_my/train_names.txt"
+        self.image_list = ["bricks"]
         self.batch_size = 16
 opt = small_opt()
 
