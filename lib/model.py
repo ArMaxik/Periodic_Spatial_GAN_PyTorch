@@ -68,7 +68,7 @@ class PSGAN():
             
             self._make_stat(epoch)
             self._save_weights()
-            tqdm.write(f"[#{epoch+1}] train epoch dloss: {self.d_loss:.5f}, gloss: {self.g_loss:.5f}")
+            tqdm.write(f"[#{epoch+1}] train epoch | {self.opt.exp_name} | dloss: {self.d_loss:.5f}, gloss: {self.g_loss:.5f}")
 
     def _setup_train(self):
         self.img_list = []
@@ -101,6 +101,11 @@ class PSGAN():
         tmp_loader = iter(tmp_loader)
         # self.fixed_noise = self.generate_noise(36)
         self.fixed_noise = (self.generate_noise(36)[0], next(tmp_loader).to(self.opt.device))
+
+        vutils.save_image(
+            self.fixed_noise[1], os.path.join(self.opt.work_folder, "fixed_batch.png"),
+            padding=0, normalize=True, nrow=6
+        )
 
     def _make_stat(self, epoch):
         # Save progress image
