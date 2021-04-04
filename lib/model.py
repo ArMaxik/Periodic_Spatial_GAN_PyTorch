@@ -26,23 +26,24 @@ class Texture_generator():
         self.gen.load_state_dict(weights)
         self.gen.to(self.opt.device)
 
+        img_size = self.opt.spatial_size*(2**len(self.opt.gen_conv_channels))
+        self.dataloader = get_loader(
+            data_set=get_dtd_data_loader(self.opt, img_size),
+            batch_size=self.opt.batch_size,
+            shuffle=True,
+            num_workers=8
+        )
+
     def generate(self, spatial_size):
-        Z_l, Z_g = self.generate_noise(self.opt.batch_size, spatial_size)
-        img = self.gen(Z_l, Z_g).detach().cpu()
-        return img
+        Z_l, imgs = self.generate_noise(self.opt.batch_size, spatial_size)
+        img = self.gen(Z_l, imgs).detach().cpu()
+        return img, imgs
 
     def generate_noise(self, batch_size, spatial_size):
         Z_l = torch.rand((batch_size, self.opt.local_noise_dim, spatial_size, spatial_size), device=self.opt.device) * 2.0 - 1.0
-        Z_g = torch.rand((batch_size, self.opt.global_noise_dim, 1, 1), device=self.opt.device) * 2.0 - 1.0
-        pad = (
-            spatial_size // 2 - 1 + spatial_size % 2,
-            spatial_size // 2,
-            spatial_size // 2 - 1 + spatial_size % 2,
-            spatial_size // 2
-        )
-        Z_g = F.pad(Z_g, pad, mode='replicate')
-
-        return (Z_l, Z_g)
+        loader_it = iter(self.dataloader)
+        imgs = next(loader_it).to(self.opt.device)
+        return (Z_l, imgs)
 
 class PSGAN():
     def __init__(self, opt):

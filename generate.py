@@ -23,10 +23,18 @@ with open(args.config, 'r') as config:
 args = parser.parse_args()
 opt = options(args)
 opt.spatial_size = args.spatial
+# opt.image_list = ["book_pages"]
 
 gen = Texture_generator(opt)
 for b in range(args.number // opt.batch_size + 1):
-    img = gen.generate(opt.spatial_size)
+    img, static_imgs = gen.generate(opt.spatial_size)
+    vutils.save_image(
+        static_imgs,
+        os.path.join(args.output + f"static_{b+1}.png"),
+        padding=0,
+        nrow=int(opt.batch_size**0.5),
+        normalize=True,
+    )
     i = 0
     while i < opt.batch_size and i < args.number - b*opt.batch_size:
         num = i+b*opt.batch_size
