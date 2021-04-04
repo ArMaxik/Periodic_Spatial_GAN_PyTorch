@@ -25,14 +25,16 @@ class options:
         # Training folder
         work_folder = os.path.join(self.out_folder, self.exp_name)
         setattr(self, "work_folder", work_folder)
+        # weights
+        self.weights = os.path.join(self.work_folder, "c_gen.pth")
 
     def dump(self, path):
-        res = ""
+        config = {}
         for k, v in self.__dict__.items():
-            res += f"{k:.<20} {v}\n"
-
-        with open(os.path.join(path, "options.txt"), 'w') as f:
-            f.write(res)
+            config[k] = v
+        config['device'] = str(config['device'])
+        with open(os.path.join(path, "config.json"), 'w') as f:
+            f.write(json.dumps(config, indent=4,))
 
     def show(self):
         print("--- Training options ---")

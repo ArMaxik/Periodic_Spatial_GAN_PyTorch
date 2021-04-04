@@ -1,7 +1,7 @@
 {
     "exp_name": "PSGAN_09",
     "out_folder": "./out",
-    "weights": "",
+    "weights": "/raid/veliseev/dev/psgan_my/out/PSGAN_09/c_gen.pth",
     "gen_conv_channels": [512, 256, 128, 64, 3],
     "dis_conv_channels": [3, 64, 128, 256, 512, 1],
     "local_noise_dim": 40,
@@ -12,10 +12,10 @@
     "spatial_size": 6,
 
     "dataset": "/raid/veliseev/datasets/dtd/images/",
-    "image_list": ["waffled"],
+    "image_list": ["dotted"],
 
     "batch_size": 25,
-    "epochs": 5000,
+    "epochs": 3500,
     "lr_d": 0.0002,
     "lr_g": 0.0002,
     "g_it": 1,

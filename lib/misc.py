@@ -24,6 +24,8 @@ def remove_module_from_state_dict(state_dict):
     old_keys = list(state_dict.keys())
     for key in old_keys:
         new_key = key.replace('module.', '')
+        if new_key == key:
+            continue
         state_dict[new_key] = state_dict[key]
         state_dict.pop(key)
 
