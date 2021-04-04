@@ -39,7 +39,7 @@ class PSGAN():
             
             self._make_stat(epoch)
             self._save_weights()
-            tqdm.write(f"[#{epoch+1}] train epoch dloss: {self.d_loss:.5f}, gloss: {self.g_loss:.5f}")
+            tqdm.write(f"[#{epoch+1}] train epoch | {self.opt.exp_name} | dloss: {self.d_loss:.5f}, gloss: {self.g_loss:.5f}")
 
     def _setup_train(self):
         self.img_list = []
@@ -89,7 +89,6 @@ class PSGAN():
         plt.close()
 
     def generate_noise(self, batch_size):
-        # TODO: Z_l seems like not right thing
         Z_l = torch.rand((batch_size, self.opt.local_noise_dim, self.opt.spatial_size, self.opt.spatial_size), device=self.opt.device) * 2.0 - 1.0
         Z_g = torch.rand((batch_size, self.opt.global_noise_dim, 1, 1), device=self.opt.device) * 2.0 - 1.0
         pad = (
@@ -123,7 +122,7 @@ class PSGAN():
         d_real_out = self.dis(self.data_device)
         d_real_loss = self.criterion(d_real_out, self.real_label)
 
-        d_real_loss.backward()
+        # d_real_loss.backward()
         ### Train with fake images
         # Generate fake images
         Z_l, Z_g = self.generate_noise(self.current_batch)
@@ -132,8 +131,10 @@ class PSGAN():
         d_fake_out = self.dis(imgs_fake)
         d_fake_loss = self.criterion(d_fake_out, self.fake_label)
 
-        d_fake_loss.backward()
+        # d_fake_loss.backward()
         self.d_loss = (d_fake_loss + d_real_loss) / 2
+        self.d_loss /= self.opt.spatial_size * self.opt.spatial_size
+        self.d_loss.backward()
         # Optimize weights
         self.op_dis.step()
 
@@ -145,7 +146,7 @@ class PSGAN():
         # Calculate gradient
         g_fake_out = self.dis(imgs_fake)
         self.g_loss = self.criterion(g_fake_out, self.real_label)
-
+        self.g_loss /= self.opt.spatial_size * self.opt.spatial_size
         self.g_loss.backward()
         # Optimize weights
         self.op_gen.step()
