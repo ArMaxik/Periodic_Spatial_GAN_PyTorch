@@ -26,12 +26,31 @@ class PSGAN_Generator(nn.Module):
         layers.append(nn.Tanh())
 
         self.gen = nn.Sequential(*layers)
+        self._init_coder()
 
         self.apply(weights_init)
 
-    def forward(self, Z_l, Z_g):
-        assert Z_l.shape[1] == self.opt.local_noise_dim
+    def _init_coder(self):
+        layers = []
+        # Repiting layers
+        for in_c, out_c in zip(self.opt.dis_conv_channels[:-2], self.opt.dis_conv_channels[1:-1]):
+            layers.append(nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=self.opt.kernel_size, stride=2, padding=1))
+            layers.append(nn.BatchNorm2d(out_c))
+            layers.append(nn.LeakyReLU(negative_slope=0.2))
+        # layers.pop(1)
+        # Last layer
+        layers.append(nn.Conv2d(in_channels=self.opt.dis_conv_channels[-2], out_channels=self.opt.local_noise_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1))
+        layers.append(nn.Tanh())
+
+        self.cod = nn.Sequential(*layers)
+
+    def forward(self, imgs, Z_g):
+        # assert Z_l.shape[1] == self.opt.local_noise_dim
         assert Z_g.shape[1] == self.opt.global_noise_dim
+        # Z local
+        Z_l = self.cod(imgs)
+        # if Z_l.shape[1] != self.opt.local_noise_dim:
+        #     Z_l = Z_l.expand(-1, self.opt.local_noise_dim, -1, -1)
         # Z pereodic
         Z_p = self._z_p_gen(Z_g)
         # Summarized Z
@@ -63,17 +82,14 @@ class PSGAN_Discriminator(nn.Module):
     def __init__(self, opt):
         super(PSGAN_Discriminator, self).__init__()
         self.opt = opt
-        noise_dim = self.opt.local_noise_dim + self.opt.global_noise_dim + self.opt.periodic_noise_dim
 
-        # Generator layers
+        # Discriminator layers
         layers = []
         # Repiting layers
         for in_c, out_c in zip(self.opt.dis_conv_channels[:-2], self.opt.dis_conv_channels[1:-1]):
             layers.append(nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=self.opt.kernel_size, stride=2, padding=1))
             layers.append(nn.BatchNorm2d(out_c))
             layers.append(nn.LeakyReLU(negative_slope=0.2))
-        # Remove first BN
-        # TODO: Do we really need this?
         # layers.pop(1)
         # Last layer
         layers.append(nn.Conv2d(in_channels=self.opt.dis_conv_channels[-2], out_channels=self.opt.dis_conv_channels[-1], kernel_size=self.opt.kernel_size, stride=2, padding=1))

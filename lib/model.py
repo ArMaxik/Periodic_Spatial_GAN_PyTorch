@@ -53,7 +53,6 @@ class PSGAN():
         self.op_gen = torch.optim.Adam(self.gen.parameters(), lr=self.opt.lr_g, weight_decay=1e-8, betas=(self.opt.b1, self.opt.b2))
         self.op_dis = torch.optim.Adam(self.dis.parameters(), lr=self.opt.lr_d, weight_decay=1e-8, betas=(self.opt.b1, self.opt.b2))
 
-        self.fixed_noise = self.generate_noise(36)
 
         img_size = self.opt.spatial_size*(2**len(self.opt.gen_conv_channels))
         self.dataloader = get_loader(
@@ -63,6 +62,16 @@ class PSGAN():
             # num_workers=self.opt.num_workers
             num_workers=8
         )
+        tmp_loader = get_loader(
+            data_set=get_dtd_data_loader(self.opt, img_size),
+            batch_size=36,
+            shuffle=True,
+            # num_workers=self.opt.num_workers
+            num_workers=8
+        )
+        tmp_loader = iter(tmp_loader)
+        # self.fixed_noise = self.generate_noise(36)
+        self.fixed_noise = (next(tmp_loader).to(self.opt.device), self.generate_noise(36)[1])
 
     def _make_stat(self, epoch):
         # Save progress image
@@ -123,17 +132,19 @@ class PSGAN():
         d_real_out = self.dis(self.data_device)
         d_real_loss = self.criterion(d_real_out, self.real_label)
 
-        d_real_loss.backward()
+        # d_real_loss.backward()
         ### Train with fake images
         # Generate fake images
         Z_l, Z_g = self.generate_noise(self.current_batch)
-        imgs_fake = self.gen(Z_l, Z_g)
+        imgs_fake = self.gen(self.data_device, Z_g)
         # Calculate gradient
         d_fake_out = self.dis(imgs_fake)
         d_fake_loss = self.criterion(d_fake_out, self.fake_label)
 
-        d_fake_loss.backward()
+        # d_fake_loss.backward()
         self.d_loss = (d_fake_loss + d_real_loss) / 2
+        self.d_loss /= self.opt.spatial_size * self.opt.spatial_size
+        self.d_loss.backward()
         # Optimize weights
         self.op_dis.step()
 
@@ -141,11 +152,11 @@ class PSGAN():
         self.op_gen.zero_grad()
         # Generate fake images
         Z_l, Z_g = self.generate_noise(self.current_batch)
-        imgs_fake = self.gen(Z_l, Z_g)
+        imgs_fake = self.gen(self.data_device, Z_g)
         # Calculate gradient
         g_fake_out = self.dis(imgs_fake)
         self.g_loss = self.criterion(g_fake_out, self.real_label)
-
+        self.g_loss /= self.opt.spatial_size * self.opt.spatial_size
         self.g_loss.backward()
         # Optimize weights
         self.op_gen.step()
