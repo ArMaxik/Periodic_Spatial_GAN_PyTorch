@@ -17,6 +17,7 @@ if __name__ == '__main__':
     opt = options(args)
     opt.show()
     prep_dirs(opt)
+    opt.dump(opt.work_folder)
 
     psgan = PSGAN(opt)
 

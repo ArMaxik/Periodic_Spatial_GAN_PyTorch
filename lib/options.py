@@ -23,12 +23,16 @@ class options:
         # Number of devices
         setattr(self, "num_devices", len(args.device_ids))
         # Training folder
-        save_folder = os.path.join(self.out_folder, self.exp_name)
-        setattr(self, "work_folder", save_folder)
+        work_folder = os.path.join(self.out_folder, self.exp_name)
+        setattr(self, "work_folder", work_folder)
 
-    # TODO: options dump
-    def dump(self):
-        pass
+    def dump(self, path):
+        res = ""
+        for k, v in self.__dict__.items():
+            res += f"{k:.<20} {v}\n"
+
+        with open(os.path.join(path, "options.txt"), 'w') as f:
+            f.write(res)
 
     def show(self):
         print("--- Training options ---")

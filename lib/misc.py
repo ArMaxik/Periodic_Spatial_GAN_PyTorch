@@ -70,5 +70,5 @@ def make_video(img_path, save_path, name):
     ani = animation.ArtistAnimation(fig, imgs, interval=600, repeat_delay=100, blit=True)
 
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=30, bitrate=15000, codec='mpeg4')
+    writer = Writer(fps=30, bitrate=25000, codec='mpeg4')
     ani.save(os.path.join(save_path, name+'_hist.mp4'), writer=writer)
