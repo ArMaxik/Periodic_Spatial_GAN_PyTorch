@@ -25,13 +25,17 @@ opt = options(args)
 opt.spatial_size = args.spatial
 
 gen = Texture_generator(opt)
-for i in range(args.number):
-    print(f"Generating image: {i+1:{len(str(args.number))}}/{args.number}")
+for b in range(args.number // opt.batch_size + 1):
     img = gen.generate(opt.spatial_size)
-    vutils.save_image(
-            img,
-            os.path.join(args.output + f"{i}.png"),
-            padding=0,
-            nrow=1,
-            normalize=True,
-        )
+    i = 0
+    while i < opt.batch_size and i < args.number - b*opt.batch_size:
+        num = i+b*opt.batch_size
+        print(f"Generating image: {num+1:{len(str(args.number))}}/{args.number}")
+        vutils.save_image(
+                img[i],
+                os.path.join(args.output + f"{num}.png"),
+                padding=0,
+                nrow=1,
+                normalize=True,
+            )
+        i += 1
