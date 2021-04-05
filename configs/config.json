@@ -1,25 +1,28 @@
 {
-    "exp_name": "PSGAN_02",
+    "exp_name": "PSGAN_20",
     "out_folder": "./out",
     "weights": "",
     "gen_conv_channels": [512, 256, 128, 64, 3],
     "dis_conv_channels": [3, 64, 128, 256, 512, 1],
-    "local_noise_dim": 10,
-    "global_noise_dim": 1,
-    "periodic_noise_dim": 2,
+    "local_noise_dim": 40,
+    "global_noise_dim": 20,
+    "periodic_noise_dim": 4,
     "hidden_noise_dim": 60,
     "kernel_size": 4,
-    "spatial_size": 10,
-
+    "spatial_size": 6,
+    
     "dataset": "/raid/veliseev/datasets/dtd/images/",
-    "image_list": ["bricks"],
-
+    "image_list": ["crystalline", "book_pages"],
+    
     "batch_size": 25,
     "epochs": 2500,
-    "lr_d": 0.0002,
-    "lr_g": 0.0002,
+    "lr_d": 0.002,
+    "lr_g": 0.002,
     "g_it": 1,
     "d_it": 1,
     "b1": 0.5,
-    "b2": 0.999
+    "b2": 0.999,
+    "lambda_coff": 10.0,
+    "eps_drift": 0.001,
+    "loss": "WGAN"
 }

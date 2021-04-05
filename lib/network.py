@@ -77,7 +77,8 @@ class PSGAN_Discriminator(nn.Module):
         # layers.pop(1)
         # Last layer
         layers.append(nn.Conv2d(in_channels=self.opt.dis_conv_channels[-2], out_channels=self.opt.dis_conv_channels[-1], kernel_size=self.opt.kernel_size, stride=2, padding=1))
-        layers.append(nn.Sigmoid())
+        if self.opt.loss != "WGAN":
+            layers.append(nn.Sigmoid())
 
         self.dis = nn.Sequential(*layers)
 

@@ -149,20 +149,29 @@ class PSGAN():
         self.op_dis.zero_grad()
         ### Train with real images
         d_real_out = self.dis(self.data_device)
-        d_real_loss = self.criterion(d_real_out, self.real_label)
 
-        # d_real_loss.backward()
         ### Train with fake images
         # Generate fake images
         Z_l, Z_g = self.generate_noise(self.current_batch)
         imgs_fake = self.gen(Z_l, Z_g)
         # Calculate gradient
         d_fake_out = self.dis(imgs_fake)
-        d_fake_loss = self.criterion(d_fake_out, self.fake_label)
+        # Apply cost function
+        if self.opt.loss == "WGAN":
+            gp = self._gradien_penalty(self.data_device, imgs_fake)
+            d_real_out = d_real_out.view(-1).mean()
+            d_fake_out = d_fake_out.view(-1).mean()
 
-        # d_fake_loss.backward()
-        self.d_loss = (d_fake_loss + d_real_loss) / 2
-        self.d_loss /= self.opt.spatial_size * self.opt.spatial_size
+            self.d_loss = d_fake_out - d_real_out + gp
+            self.d_loss += self.opt.eps_drift * torch.mean(d_real_out ** 2)
+        else:
+            # Otherwise using BCELoss by default
+            d_real_loss = self.criterion(d_real_out, self.real_label)
+            d_fake_loss = self.criterion(d_fake_out, self.fake_label)
+
+            self.d_loss = (d_fake_loss + d_real_loss) / 2
+            self.d_loss /= self.opt.spatial_size * self.opt.spatial_size
+
         self.d_loss.backward()
         # Optimize weights
         self.op_dis.step()
@@ -174,11 +183,38 @@ class PSGAN():
         imgs_fake = self.gen(Z_l, Z_g)
         # Calculate gradient
         g_fake_out = self.dis(imgs_fake)
-        self.g_loss = self.criterion(g_fake_out, self.real_label)
-        self.g_loss /= self.opt.spatial_size * self.opt.spatial_size
+        # Apply cost function
+        if self.opt.loss == "WGAN":
+            self.g_loss = -g_fake_out.view(-1).mean()
+        else:
+            # Otherwise using BCELoss by default
+            self.g_loss = self.criterion(g_fake_out, self.real_label)
+            self.g_loss /= self.opt.spatial_size * self.opt.spatial_size
+
         self.g_loss.backward()
         # Optimize weights
         self.op_gen.step()
+
+    def _gradien_penalty(self, imgs_real, imgs_fake):
+        b, c, h, w = imgs_real.shape
+        epsilon = torch.rand((b, 1, 1, 1), device=self.opt.device).repeat(1, c, h, w)
+        interpolate = epsilon*imgs_real + (1.0 - epsilon)*imgs_fake
+        interpolate.requires_grad_(True)
+
+        d_interpolate = self.dis(interpolate).view(-1)
+
+        gradients = torch.autograd.grad(
+            outputs=d_interpolate,
+            inputs=interpolate,
+            grad_outputs=torch.ones(d_interpolate.shape, device=self.opt.device),
+            create_graph=True,
+            retain_graph=True,
+            only_inputs=True,
+        )[0]
+        gradients = gradients.view(b, -1)
+
+        penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+        return self.opt.lambda_coff * penalty
 
     def _save_weights(self):
         g_w = self.gen.state_dict()
