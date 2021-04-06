@@ -11,9 +11,9 @@ from misc import *
 DATA_PATH = "/raid/veliseev/datasets/dtd/images/"
 class small_opt:
     def __init__(self):
-        self.dataset = "/raid/veliseev/datasets/dtd/images/"
-        self.image_list = ["bricks"]
-        self.batch_size = 16
+        self.dataset = "/raid/veliseev/datasets/textures/"
+        self.image_list = ["rock"]
+        self.batch_size = 36
 opt = small_opt()
 
 
@@ -49,7 +49,7 @@ for i_batch, im in enumerate(dataloader):
     
     torchvision.utils.save_image(
         im, os.path.join(f"./{i_batch}.png"),
-        padding=int(img_size*0.05), normalize=True, nrow=4
+        padding=int(img_size*0.05), normalize=True, nrow=6
     )
     if i_batch == 2:
         break

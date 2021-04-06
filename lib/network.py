@@ -7,7 +7,7 @@ class PSGAN_Generator(nn.Module):
     def __init__(self, opt):
         super(PSGAN_Generator, self).__init__()
         self.opt = opt
-        noise_dim = self.opt.local_noise_dim + self.opt.global_noise_dim + self.opt.periodic_noise_dim
+        noise_dim = self.opt.image_coder_dim + self.opt.local_noise_dim + self.opt.global_noise_dim + self.opt.periodic_noise_dim
 
         # Z_p generator
         self.l = nn.Linear(in_features=self.opt.global_noise_dim, out_features=self.opt.hidden_noise_dim)
@@ -39,10 +39,10 @@ class PSGAN_Generator(nn.Module):
             layers.append(nn.LeakyReLU(negative_slope=0.2))
         # layers.pop(1)
         # Last layer
-        layers.append(nn.Conv2d(in_channels=self.opt.dis_conv_channels[-2], out_channels=self.opt.global_noise_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1))
-        layers.append(nn.BatchNorm2d(self.opt.global_noise_dim))
-        layers.append(nn.LeakyReLU(negative_slope=0.2))
-        layers.append(nn.Conv2d(in_channels=self.opt.global_noise_dim, out_channels=self.opt.global_noise_dim, kernel_size=self.opt.spatial_size, stride=1, padding=0))
+        layers.append(nn.Conv2d(in_channels=self.opt.dis_conv_channels[-2], out_channels=self.opt.image_coder_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1))
+        # layers.append(nn.BatchNorm2d(self.opt.global_noise_dim))
+        # layers.append(nn.LeakyReLU(negative_slope=0.2))
+        # layers.append(nn.Conv2d(in_channels=self.opt.global_noise_dim, out_channels=self.opt.image_coder_dim, kernel_size=self.opt.spatial_size, stride=1, padding=0))
         # self.cod_l = nn.Linear(in_features=self.opt.global_noise_dim * self.opt.spatial_size * self.opt.spatial_size, out_features = self.opt.global_noise_dim)
         layers.append(nn.Tanh())
 
@@ -58,18 +58,21 @@ class PSGAN_Generator(nn.Module):
         Z_g = F.pad(Z_g, pad, mode='replicate')
         return Z_g
 
-    def forward(self, Z_l, imgs):
+    def forward(self, Z_l, Z_g, imgs):
         assert Z_l.shape[1] == self.opt.local_noise_dim
         # assert Z_g.shape[1] == self.opt.global_noise_dim
+        # Z coder
+        Z_c = self.cod(imgs)
         # Z local
         # Z_l = self.cod(imgs)
         # Z global
-        Z_g = self.cod(imgs)
-        Z_g = self._expand_Z_g(Z_g)
+        # Z_g = self.cod(imgs)
+        # Z_g = self._expand_Z_g(Z_g)
         # Z pereodic
         Z_p = self._z_p_gen(Z_g)
         # Summarized Z
-        Z = torch.cat((Z_l, Z_g, Z_p), dim=1)
+        # print("\n"*3, Z_c.shape, Z_l.shape, Z_g.shape, Z_p.shape,"\n"*3)
+        Z = torch.cat((Z_c, Z_l, Z_g, Z_p), dim=1)
 
         x = self.gen(Z)
         return x

@@ -26,9 +26,9 @@ class Texture_generator():
         self.gen.load_state_dict(weights)
         self.gen.to(self.opt.device)
 
-        img_size = self.opt.spatial_size*(2**len(self.opt.gen_conv_channels))
+        self.img_size = self.opt.spatial_size*(2**len(self.opt.gen_conv_channels))
         self.dataloader = get_loader(
-            data_set=get_dtd_data_loader(self.opt, img_size),
+            data_set=get_dtd_data_loader(self.opt, self.img_size),
             batch_size=self.opt.batch_size,
             shuffle=True,
             num_workers=8
@@ -84,16 +84,16 @@ class PSGAN():
         self.op_dis = torch.optim.Adam(self.dis.parameters(), lr=self.opt.lr_d, weight_decay=1e-8, betas=(self.opt.b1, self.opt.b2))
 
 
-        img_size = self.opt.spatial_size*(2**len(self.opt.gen_conv_channels))
+        self.img_size = self.opt.spatial_size*(2**len(self.opt.gen_conv_channels))
         self.dataloader = get_loader(
-            data_set=get_dtd_data_loader(self.opt, img_size),
+            data_set=get_dtd_data_loader(self.opt, self.img_size, self.opt.batch_size),
             batch_size=self.opt.batch_size,
             shuffle=True,
             # num_workers=self.opt.num_workers
             num_workers=8
         )
         tmp_loader = get_loader(
-            data_set=get_dtd_data_loader(self.opt, img_size),
+            data_set=get_dtd_data_loader(self.opt, self.img_size, 36),
             batch_size=36,
             shuffle=True,
             # num_workers=self.opt.num_workers
@@ -101,11 +101,10 @@ class PSGAN():
         )
         tmp_loader = iter(tmp_loader)
         # self.fixed_noise = self.generate_noise(36)
-        self.fixed_noise = (self.generate_noise(36)[0], next(tmp_loader).to(self.opt.device))
-
+        self.fixed_noise = (*self.generate_noise(36), next(tmp_loader).to(self.opt.device))
         vutils.save_image(
-            self.fixed_noise[1], os.path.join(self.opt.work_folder, "fixed_batch.png"),
-            padding=0, normalize=True, nrow=6
+            self.fixed_noise[2], os.path.join(self.opt.work_folder, "fixed_batch.png"),
+            padding=int(self.img_size*0.05), normalize=True, nrow=6
         )
 
     def _make_stat(self, epoch):
@@ -115,7 +114,7 @@ class PSGAN():
                 fake = self.gen(*self.fixed_noise).detach().cpu()
                 vutils.save_image(
                     fake, os.path.join(self.opt.work_folder + f"/progress/img_{len(self.G_losses)}.png"),
-                    padding=0, normalize=True, nrow=6
+                    padding=int(self.img_size*0.05), normalize=True, nrow=6
                 )
 
         # Draw chart
@@ -171,7 +170,7 @@ class PSGAN():
         ### Train with fake images
         # Generate fake images
         Z_l, Z_g = self.generate_noise(self.current_batch)
-        imgs_fake = self.gen(Z_l, self.data_device)
+        imgs_fake = self.gen(Z_l, Z_g, self.data_device)
         # Calculate gradient
         d_fake_out = self.dis(imgs_fake)
         d_fake_loss = self.criterion(d_fake_out, self.fake_label)
@@ -187,7 +186,7 @@ class PSGAN():
         self.op_gen.zero_grad()
         # Generate fake images
         Z_l, Z_g = self.generate_noise(self.current_batch)
-        imgs_fake = self.gen(Z_l, self.data_device)
+        imgs_fake = self.gen(Z_l, Z_g, self.data_device)
         # Calculate gradient
         g_fake_out = self.dis(imgs_fake)
         self.g_loss = self.criterion(g_fake_out, self.real_label)

@@ -139,7 +139,7 @@ def get_loader(data_set, batch_size, shuffle, num_workers):
 
     return data_loader
 
-def get_dtd_data_loader(args, img_size):
+def get_dtd_data_loader(args, img_size, batch_size):
     transform = transforms.Compose([
                                     transforms.RandomCrop(img_size),
                                     transforms.RandomHorizontalFlip(),
@@ -150,7 +150,7 @@ def get_dtd_data_loader(args, img_size):
                     args.dataset,
                     args.image_list,
                     transform,
-                    args.batch_size
+                    batch_size
                 ]
 
     return DTDDataLoader(*dataset_args)
