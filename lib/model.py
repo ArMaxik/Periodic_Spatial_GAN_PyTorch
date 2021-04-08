@@ -25,25 +25,35 @@ class Texture_generator():
         print(len(weights))
         self.gen.load_state_dict(weights)
         self.gen.to(self.opt.device)
+        # self.opt.image_list = ["book_page"]
+        # self.opt.dataset = "/raid/veliseev/datasets/dtd/images/"
 
         self.img_size = self.opt.spatial_size*(2**len(self.opt.gen_conv_channels))
         self.dataloader = get_loader(
-            data_set=get_dtd_data_loader(self.opt, self.img_size),
+            data_set=get_dtd_data_loader(self.opt, self.img_size, self.opt.batch_size),
             batch_size=self.opt.batch_size,
             shuffle=True,
             num_workers=8
         )
 
     def generate(self, spatial_size):
-        Z_l, imgs = self.generate_noise(self.opt.batch_size, spatial_size)
-        img = self.gen(Z_l, imgs).detach().cpu()
+        Z_l, Z_g, imgs = self.generate_noise(self.opt.batch_size, spatial_size)
+        img = self.gen(Z_l, Z_g, imgs, spatial_size=spatial_size).detach().cpu()
         return img, imgs
 
     def generate_noise(self, batch_size, spatial_size):
         Z_l = torch.rand((batch_size, self.opt.local_noise_dim, spatial_size, spatial_size), device=self.opt.device) * 2.0 - 1.0
+        Z_g = torch.rand((batch_size, self.opt.global_noise_dim, 1, 1), device=self.opt.device) * 2.0 - 1.0
+        pad = (
+            spatial_size // 2 - 1 + spatial_size % 2,
+            spatial_size // 2,
+            spatial_size // 2 - 1 + spatial_size % 2,
+            spatial_size // 2
+        )
+        Z_g = F.pad(Z_g, pad, mode='replicate')
         loader_it = iter(self.dataloader)
         imgs = next(loader_it).to(self.opt.device)
-        return (Z_l, imgs)
+        return (Z_l, Z_g, imgs)
 
 class PSGAN():
     def __init__(self, opt):
@@ -79,6 +89,7 @@ class PSGAN():
         self.g_loss = 0.0
 
         self.criterion = nn.BCELoss()
+        self.MSEloss = nn.MSELoss()
         
         self.op_gen = torch.optim.Adam(self.gen.parameters(), lr=self.opt.lr_g, weight_decay=1e-8, betas=(self.opt.b1, self.opt.b2))
         self.op_dis = torch.optim.Adam(self.dis.parameters(), lr=self.opt.lr_d, weight_decay=1e-8, betas=(self.opt.b1, self.opt.b2))
@@ -191,6 +202,7 @@ class PSGAN():
         g_fake_out = self.dis(imgs_fake)
         self.g_loss = self.criterion(g_fake_out, self.real_label)
         self.g_loss /= self.opt.spatial_size * self.opt.spatial_size
+        self.g_loss += self.MSEloss(imgs_fake, self.data_device) * self.opt.MSE_coff
         self.g_loss.backward()
         # Optimize weights
         self.op_gen.step()

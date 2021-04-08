@@ -40,36 +40,45 @@ class PSGAN_Generator(nn.Module):
         # layers.pop(1)
         # Last layer
         layers.append(nn.Conv2d(in_channels=self.opt.dis_conv_channels[-2], out_channels=self.opt.image_coder_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1))
-        # layers.append(nn.BatchNorm2d(self.opt.global_noise_dim))
-        # layers.append(nn.LeakyReLU(negative_slope=0.2))
-        # layers.append(nn.Conv2d(in_channels=self.opt.global_noise_dim, out_channels=self.opt.image_coder_dim, kernel_size=self.opt.spatial_size, stride=1, padding=0))
-        # self.cod_l = nn.Linear(in_features=self.opt.global_noise_dim * self.opt.spatial_size * self.opt.spatial_size, out_features = self.opt.global_noise_dim)
-        layers.append(nn.Tanh())
-
+        layers.append(nn.BatchNorm2d(self.opt.image_coder_dim))
+        layers.append(nn.LeakyReLU(negative_slope=0.2))
         self.cod = nn.Sequential(*layers)
+        self.cod_l1 = nn.Linear(in_features=self.opt.image_coder_dim * self.opt.spatial_size * self.opt.spatial_size, out_features = self.opt.image_coder_dim*self.opt.spatial_size)
+        self.cod_leaky = nn.LeakyReLU(negative_slope=0.2)
+        self.cod_l2 = nn.Linear(in_features=self.opt.image_coder_dim*self.opt.spatial_size, out_features = self.opt.image_coder_dim)
+        self.cod_tanh = nn.Tanh()
 
-    def _expand_Z_g(self, Z_g):
+
+    def _expand_Z_c(self, Z_c, spatial_size):
+        Z_c = Z_c.view(Z_c.shape[0], -1, 1, 1)
         pad = (
-            self.opt.spatial_size // 2 - 1 + self.opt.spatial_size % 2,
-            self.opt.spatial_size // 2,
-            self.opt.spatial_size // 2 - 1 + self.opt.spatial_size % 2,
-            self.opt.spatial_size // 2
+            spatial_size // 2 - 1 + spatial_size % 2,
+            spatial_size // 2,
+            spatial_size // 2 - 1 + spatial_size % 2,
+            spatial_size // 2
         )
-        Z_g = F.pad(Z_g, pad, mode='replicate')
-        return Z_g
+        Z_c = F.pad(Z_c, pad, mode='replicate')
+        return Z_c
 
-    def forward(self, Z_l, Z_g, imgs):
+    def forward(self, Z_l, Z_g, imgs, spatial_size=None):
+        if spatial_size == None:
+            spatial_size=self.opt.spatial_size
         assert Z_l.shape[1] == self.opt.local_noise_dim
         # assert Z_g.shape[1] == self.opt.global_noise_dim
         # Z coder
         Z_c = self.cod(imgs)
+        Z_c = self.cod_l1(Z_c.view(Z_c.shape[0], -1))
+        Z_c = self.cod_leaky(Z_c)
+        Z_c = self.cod_l2(Z_c)
+        Z_c = self.cod_tanh(Z_c)
+        Z_c = self._expand_Z_c(Z_c, spatial_size)
         # Z local
         # Z_l = self.cod(imgs)
         # Z global
         # Z_g = self.cod(imgs)
         # Z_g = self._expand_Z_g(Z_g)
         # Z pereodic
-        Z_p = self._z_p_gen(Z_g)
+        Z_p = self._z_p_gen(Z_g, spatial_size)
         # Summarized Z
         # print("\n"*3, Z_c.shape, Z_l.shape, Z_g.shape, Z_p.shape,"\n"*3)
         Z = torch.cat((Z_c, Z_l, Z_g, Z_p), dim=1)
@@ -77,7 +86,7 @@ class PSGAN_Generator(nn.Module):
         x = self.gen(Z)
         return x
 
-    def _z_p_gen(self, Z_g):
+    def _z_p_gen(self, Z_g, spatial_size):
         current_batch_size = Z_g.shape[0]
         Z_g = Z_g[:,:,0, 0].view(current_batch_size, self.opt.global_noise_dim)
         x = self.l(Z_g)
@@ -85,10 +94,10 @@ class PSGAN_Generator(nn.Module):
         K1 = self.l1(x)
         K2 = self.l2(x)
 
-        Z_p = torch.zeros(current_batch_size, self.opt.periodic_noise_dim, self.opt.spatial_size, self.opt.spatial_size, device=Z_g.device)
+        Z_p = torch.zeros(current_batch_size, self.opt.periodic_noise_dim, spatial_size, spatial_size, device=Z_g.device)
         # I think it can be better
-        for l in range(self.opt.spatial_size):
-            for m in range(self.opt.spatial_size):
+        for l in range(spatial_size):
+            for m in range(spatial_size):
                 Z_p[:, :, l, m] = K1*l + K2*m
 
         phi = torch.rand(current_batch_size, self.opt.periodic_noise_dim, 1, 1, device=Z_g.device) * 2.0 * math.pi
