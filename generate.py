@@ -32,7 +32,7 @@ for b in range(args.number // opt.batch_size + 1):
     vutils.save_image(
         static_imgs,
         os.path.join(args.output + f"static_{b+1}.png"),
-        padding=0,
+        padding=5,
         nrow=int(opt.batch_size**0.5),
         normalize=True,
     )

@@ -1,20 +1,34 @@
 {
-    "exp_name": "PSGAN_27_exp",
+    "exp_name": "PSGAN_44_exp_all",
     "out_folder": "./out",
     "weights": "",
     "gen_conv_channels": [512, 256, 128, 64, 3],
     "dis_conv_channels": [3, 64, 128, 256, 512, 1],
-    "local_noise_dim": 35,
-    "global_noise_dim": 25,
-    "periodic_noise_dim": 3,
-    "image_coder_dim": 10,
-    "hidden_noise_dim": 60,
+    "local_noise_dim": 256,
+    "global_noise_dim": 128,
+    "periodic_noise_dim": 6,
+    "image_coder_dim": 198,
+    "hidden_noise_dim": 128,
     "kernel_size": 4,
-    "spatial_size": 12,
+    "spatial_size": 10,
 
-    "dataset": "/raid/veliseev/datasets/dtd/images/",
+    "dataset": "/raid/veliseev/datasets/textures/",
     "image_list": [
-        "bricks"
+        "Architectural",
+        "Bricks",
+        "City Street",
+        "Cobblestone",
+        "Concrete",
+        "Fabric",
+        "Ground",
+        "Grunge",
+        "Marble",
+        "Metal",
+        "Nature",
+        "Plaster",
+        "Rock",
+        "Tiles",
+        "Wood"
     ],
 
     "batch_size": 25,
@@ -25,5 +39,6 @@
     "d_it": 1,
     "b1": 0.5,
     "b2": 0.999,
-    "MSE_coff": 0.005
+    "MSE_coff": 1.0,
+    "adv_coff": 0.1
 }

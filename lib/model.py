@@ -80,6 +80,7 @@ class PSGAN():
             self._make_stat(epoch)
             self._save_weights()
             tqdm.write(f"[#{epoch+1}] train epoch | {self.opt.exp_name} | dloss: {self.d_loss:.5f}, gloss: {self.g_loss:.5f}")
+        self._save_progress_image(os.path.join(self.opt.work_folder, "img_final.png"))
 
     def _setup_train(self):
         self.img_list = []
@@ -108,7 +109,7 @@ class PSGAN():
             batch_size=36,
             shuffle=True,
             # num_workers=self.opt.num_workers
-            num_workers=8
+            num_workers=32
         )
         tmp_loader = iter(tmp_loader)
         # self.fixed_noise = self.generate_noise(36)
@@ -118,15 +119,18 @@ class PSGAN():
             padding=int(self.img_size*0.05), normalize=True, nrow=6
         )
 
+    def _save_progress_image(self, path):
+        with torch.no_grad():
+            fake = self.gen(*self.fixed_noise).detach().cpu()
+            vutils.save_image(
+                fake, path,
+                padding=int(self.img_size*0.05), normalize=True, nrow=6
+            )
+
     def _make_stat(self, epoch):
         # Save progress image
         if epoch % 10 == 0:
-            with torch.no_grad():
-                fake = self.gen(*self.fixed_noise).detach().cpu()
-                vutils.save_image(
-                    fake, os.path.join(self.opt.work_folder + f"/progress/img_{len(self.G_losses)}.png"),
-                    padding=int(self.img_size*0.05), normalize=True, nrow=6
-                )
+            self._save_progress_image(os.path.join(self.opt.work_folder + f"/progress/img_{len(self.G_losses)}.png"))
 
         # Draw chart
         self.G_losses.append(self.g_loss.item())
@@ -174,7 +178,7 @@ class PSGAN():
     def _train_discriminator(self):
         self.op_dis.zero_grad()
         ### Train with real images
-        d_real_out = self.dis(self.data_device)
+        d_real_out = self.dis(self.data_device)[0]
         d_real_loss = self.criterion(d_real_out, self.real_label)
 
         # d_real_loss.backward()
@@ -183,7 +187,7 @@ class PSGAN():
         Z_l, Z_g = self.generate_noise(self.current_batch)
         imgs_fake = self.gen(Z_l, Z_g, self.data_device)
         # Calculate gradient
-        d_fake_out = self.dis(imgs_fake)
+        d_fake_out = self.dis(imgs_fake)[0]
         d_fake_loss = self.criterion(d_fake_out, self.fake_label)
 
         # d_fake_loss.backward()
@@ -199,10 +203,12 @@ class PSGAN():
         Z_l, Z_g = self.generate_noise(self.current_batch)
         imgs_fake = self.gen(Z_l, Z_g, self.data_device)
         # Calculate gradient
-        g_fake_out = self.dis(imgs_fake)
+        g_fake_out, prelast_layer_fake = self.dis(imgs_fake)
+        _, prelast_layer_real = self.dis(self.data_device)
         self.g_loss = self.criterion(g_fake_out, self.real_label)
         self.g_loss /= self.opt.spatial_size * self.opt.spatial_size
         self.g_loss += self.MSEloss(imgs_fake, self.data_device) * self.opt.MSE_coff
+        self.g_loss += self.MSEloss(prelast_layer_fake, prelast_layer_real) * self.opt.adv_coff
         self.g_loss.backward()
         # Optimize weights
         self.op_gen.step()

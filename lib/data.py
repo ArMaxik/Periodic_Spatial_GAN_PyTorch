@@ -142,7 +142,7 @@ def get_loader(data_set, batch_size, shuffle, num_workers):
 def get_dtd_data_loader(args, img_size, batch_size):
     transform = transforms.Compose([
                                     transforms.RandomCrop(img_size),
-                                    transforms.RandomHorizontalFlip(),
+                                    # transforms.RandomHorizontalFlip(),
                                     transforms.ToTensor(),
                                     transforms.Normalize(mean=(0.5, 0.5, 0.5),std=(0.5, 0.5, 0.5))])
 

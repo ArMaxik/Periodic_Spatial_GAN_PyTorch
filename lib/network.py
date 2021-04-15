@@ -111,25 +111,30 @@ class PSGAN_Discriminator(nn.Module):
         self.opt = opt
 
         # Discriminator layers
-        layers = []
+        self.layers = nn.ModuleList()
         # Repiting layers
         for in_c, out_c in zip(self.opt.dis_conv_channels[:-2], self.opt.dis_conv_channels[1:-1]):
-            layers.append(nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=self.opt.kernel_size, stride=2, padding=1))
-            layers.append(nn.BatchNorm2d(out_c))
-            layers.append(nn.LeakyReLU(negative_slope=0.2))
+            self.layers.append(nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=self.opt.kernel_size, stride=2, padding=1))
+            self.layers.append(nn.BatchNorm2d(out_c))
+            self.layers.append(nn.LeakyReLU(negative_slope=0.2))
         # layers.pop(1)
         # Last layer
-        layers.append(nn.Conv2d(in_channels=self.opt.dis_conv_channels[-2], out_channels=self.opt.dis_conv_channels[-1], kernel_size=self.opt.kernel_size, stride=2, padding=1))
-        layers.append(nn.Sigmoid())
+        self.layers.append(nn.Conv2d(in_channels=self.opt.dis_conv_channels[-2], out_channels=self.opt.dis_conv_channels[-1], kernel_size=self.opt.kernel_size, stride=2, padding=1))
+        self.layers.append(nn.Sigmoid())
 
-        self.dis = nn.Sequential(*layers)
+        # self.dis = nn.Sequential(*layers)
 
         self.apply(weights_init)
 
     def forward(self, x):
-        x = self.dis(x)
+        # x = self.dis(x)
+        for layer in self.layers[:-2]:
+            x = layer(x)
+        adv_loss_x = x
+        for layer in self.layers[-2:]:
+            x = layer(x)
         x = x.view(x.shape[0], -1)
-        return x
+        return (x, adv_loss_x)
 
 def weights_init(m):
     classname = m.__class__.__name__
