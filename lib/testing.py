@@ -7,14 +7,17 @@ from torchsummary import summary
 from network import *
 from data import *
 from misc import *
+from options import *
 
 DATA_PATH = "/raid/veliseev/datasets/dtd/images/"
-class small_opt:
+
+class fake_args:
     def __init__(self):
-        self.dataset = "/raid/veliseev/datasets/textures/"
-        self.image_list = ["rock"]
-        self.batch_size = 36
-opt = small_opt()
+        self.config = "/raid/veliseev/dev/psgan_my/configs/config.json"
+        self.device = "cuda"
+        self.device_ids = [5]
+opt = options(fake_args())
+# opt = small_opt()
 
 
 def imshow(img, name=None):
@@ -34,7 +37,7 @@ def imshow(img, name=None):
 
 img_size = 256
 dataloader = get_loader(
-    data_set=get_dtd_data_loader(opt, img_size),
+    data_set=get_dtd_data_loader(opt, img_size, batch_size=opt.batch_size),
     batch_size=opt.batch_size,
     shuffle=True,
     # num_workers=self.opt.num_workers
@@ -54,3 +57,30 @@ for i_batch, im in enumerate(dataloader):
     if i_batch == 2:
         break
 
+gen = PSGAN_Generator(opt).cpu()
+# Noise
+Z_l = torch.rand((opt.batch_size, opt.local_noise_dim, opt.spatial_size, opt.spatial_size), device="cpu") * 2.0 - 1.0
+Z_g = torch.rand((opt.batch_size, opt.global_noise_dim, 1, 1), device="cpu") * 2.0 - 1.0
+pad = (
+    opt.spatial_size // 2 - 1 + opt.spatial_size % 2,
+    opt.spatial_size // 2,
+    opt.spatial_size // 2 - 1 + opt.spatial_size % 2,
+    opt.spatial_size // 2
+)
+Z_g = F.pad(Z_g, pad, mode='replicate')
+# New image
+img_size = opt.spatial_size * 2
+dataloader = get_loader(
+    data_set=get_dtd_data_loader(opt, img_size, batch_size=opt.batch_size),
+    batch_size=opt.batch_size,
+    shuffle=True,
+    num_workers=8
+)
+loader_it = iter(dataloader)
+fixed_noise = [Z_l, Z_g, next(loader_it).cpu()]
+print(fixed_noise[-1].shape)
+fake = gen(*fixed_noise, -1).detach().cpu()
+torchvision.utils.save_image(
+    fake, f"./fake.png",
+    padding=int(img_size*0.05), normalize=True, nrow=5
+)

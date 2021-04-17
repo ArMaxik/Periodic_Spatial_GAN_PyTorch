@@ -1,9 +1,9 @@
 {
-    "exp_name": "PSGAN_44_exp_all",
+    "exp_name": "PSGAN_45_progrssive",
     "out_folder": "./out",
     "weights": "",
-    "gen_conv_channels": [512, 256, 128, 64, 3],
-    "dis_conv_channels": [3, 64, 128, 256, 512, 1],
+    "gen_conv_channels": [512, 256, 128, 64],
+    "dis_conv_channels": [512, 256, 128, 64],
     "local_noise_dim": 256,
     "global_noise_dim": 128,
     "periodic_noise_dim": 6,
@@ -14,31 +14,19 @@
 
     "dataset": "/raid/veliseev/datasets/textures/",
     "image_list": [
-        "Architectural",
-        "Bricks",
-        "City Street",
-        "Cobblestone",
-        "Concrete",
-        "Fabric",
-        "Ground",
-        "Grunge",
-        "Marble",
-        "Metal",
-        "Nature",
-        "Plaster",
-        "Rock",
-        "Tiles",
-        "Wood"
+        "Cobblestone"
     ],
 
     "batch_size": 25,
-    "epochs": 10000,
-    "lr_d": 0.0002,
-    "lr_g": 0.0002,
+    "epochs": 2500,
+    "lr_d": 0.00001,
+    "lr_g": 0.00001,
     "g_it": 1,
     "d_it": 1,
     "b1": 0.5,
     "b2": 0.999,
+    "eps_drift": 0.001,
+    "lambda_coff": 10.0,
     "MSE_coff": 1.0,
     "adv_coff": 0.1
 }
