@@ -58,6 +58,10 @@ for i_batch, im in enumerate(dataloader):
         break
 
 gen = PSGAN_Generator(opt).cpu()
+gen.add_block()
+gen.end_transition()
+gen.add_block()
+gen.end_transition()
 # Noise
 Z_l = torch.rand((opt.batch_size, opt.local_noise_dim, opt.spatial_size, opt.spatial_size), device="cpu") * 2.0 - 1.0
 Z_g = torch.rand((opt.batch_size, opt.global_noise_dim, 1, 1), device="cpu") * 2.0 - 1.0
@@ -69,7 +73,7 @@ pad = (
 )
 Z_g = F.pad(Z_g, pad, mode='replicate')
 # New image
-img_size = opt.spatial_size * 2
+img_size = opt.spatial_size * (2 ** 3)
 dataloader = get_loader(
     data_set=get_dtd_data_loader(opt, img_size, batch_size=opt.batch_size),
     batch_size=opt.batch_size,

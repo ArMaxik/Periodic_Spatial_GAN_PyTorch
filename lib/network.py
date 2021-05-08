@@ -72,26 +72,23 @@ class PSGAN_Generator(nn.Module):
         self.cur_layer_dim = next(self.cur_layer_iter)
 
         self.layers = nn.ModuleList([
-            EqualConvTranspose2d(noise_dim, self.cur_layer_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1, bias=True),
-            PixelNorm(),
-            nn.LeakyReLU(0.2),
-            EqualConv2d(self.cur_layer_dim, self.cur_layer_dim, kernel_size=3, stride=1, padding=1, bias=True),
-            PixelNorm(),
-            nn.LeakyReLU(0.2),
+            nn.ConvTranspose2d(in_channels=noise_dim, out_channels=self.cur_layer_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1),
+            nn.BatchNorm2d(self.cur_layer_dim),
+            nn.ReLU(),
         ])
-        self.toRGB = EqualConv2d(self.cur_layer_dim, 3, kernel_size=(1, 1), bias=True)
-
+        self.toRGB = nn.Conv2d(self.cur_layer_dim, 3, kernel_size=(1, 1), bias=True)
 
         self._init_coder()
+
+        self.apply(weights_init)
 
 
     def _init_coder(self):
         # Coder layers
         self.cod_layers = nn.ModuleList([
-            EqualConv2d(self.cur_layer_dim, self.cur_layer_dim, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.LeakyReLU(0.2),
-            EqualConv2d(self.cur_layer_dim, self.opt.image_coder_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1, bias=True),
-            nn.LeakyReLU(0.2),
+            nn.Conv2d(in_channels=self.cur_layer_dim, out_channels=self.opt.image_coder_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1),
+            nn.BatchNorm2d(self.opt.image_coder_dim),
+            nn.ReLU(),
         ])
         self.cod_fromRGB = EqualConv2d(3, self.cur_layer_dim, (1, 1), bias=True)
         
@@ -117,13 +114,9 @@ class PSGAN_Generator(nn.Module):
         pre_layer_dim = self.cur_layer_dim
         self.cur_layer_dim = next(self.cur_layer_iter)
         block = nn.ModuleList([
-            nn.Upsample(scale_factor=2.0),
-            EqualConv2d(pre_layer_dim, self.cur_layer_dim, kernel_size=3, stride=1, padding=1, bias=True),
-            PixelNorm(),
-            nn.LeakyReLU(0.2),
-            EqualConv2d(self.cur_layer_dim, self.cur_layer_dim, kernel_size=3, stride=1, padding=1, bias=True),
-            PixelNorm(),
-            nn.LeakyReLU(0.2),
+            nn.ConvTranspose2d(in_channels=pre_layer_dim, out_channels=self.cur_layer_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1),
+            nn.BatchNorm2d(self.cur_layer_dim),
+            nn.ReLU(),
         ])
         self.block_size = len(block)
         self.toRGB_new = EqualConv2d(self.cur_layer_dim, 3, (1, 1), bias=True)
@@ -131,11 +124,9 @@ class PSGAN_Generator(nn.Module):
 
         # Coder
         cod_block = nn.ModuleList([
-            EqualConv2d(self.cur_layer_dim, self.cur_layer_dim, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.LeakyReLU(0.2),
-            EqualConv2d(self.cur_layer_dim, pre_layer_dim, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.LeakyReLU(0.2),
-            nn.AvgPool2d(2),
+            nn.Conv2d(in_channels=self.cur_layer_dim, out_channels=pre_layer_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1),
+            nn.BatchNorm2d(pre_layer_dim),
+            nn.LeakyReLU(negative_slope=0.2),
         ])
         self.cod_block_size = len(cod_block)
         self.cod_fromRGB_new = EqualConv2d(3, self.cur_layer_dim, (1, 1), bias=True)
@@ -143,11 +134,15 @@ class PSGAN_Generator(nn.Module):
         self.cod_layers = cod_block.extend(self.cod_layers)
 
     def _coder_forward(self, imgs, spatial_size, alpha = -1):
+        # tqdm.write(f"{imgs.shape}")
         # No trasition
         if alpha == -1:
             Z_c = self.cod_fromRGB(imgs)
+            # tqdm.write(f"{Z_c.shape}")
             for layer in self.cod_layers:
+                # tqdm.write(f"{layer}")
                 Z_c = layer(Z_c)
+                # tqdm.write(f"{Z_c.shape}")
         # Transition
         else:
             Z_c_old = torch.nn.functional.avg_pool2d(imgs, kernel_size = 2)
@@ -251,24 +246,23 @@ class PSGAN_Discriminator(nn.Module):
         
         # Discriminator layers
         self.layers = nn.ModuleList([
-            EqualConv2d(self.cur_layer_dim, self.cur_layer_dim, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.LeakyReLU(0.2),
-            EqualConv2d(self.cur_layer_dim, self.cur_layer_dim, kernel_size=self.opt.kernel_size, stride=1, padding=0, bias=True),
-            nn.LeakyReLU(0.2),
+            nn.Conv2d(in_channels=self.cur_layer_dim, out_channels=1, kernel_size=self.opt.kernel_size, stride=2, padding=1),
         ])
+        if self.opt.loss != "WGAN":
+            self.layers.append(nn.Sigmoid())
         self.fromRGB = EqualConv2d(3, self.cur_layer_dim, (1, 1), bias=True)
         self.lrelu_fromRGB = nn.LeakyReLU(0.2)
+
+        self.apply(weights_init)
 
     def add_block(self):
         pre_layer_dim = self.cur_layer_dim
         self.cur_layer_dim = next(self.cur_layer_iter)
 
         block = nn.ModuleList([
-            EqualConv2d(self.cur_layer_dim, self.cur_layer_dim, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.LeakyReLU(0.2),
-            EqualConv2d(self.cur_layer_dim, pre_layer_dim, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.LeakyReLU(0.2),
-            nn.AvgPool2d(2),
+            nn.Conv2d(in_channels=self.cur_layer_dim, out_channels=pre_layer_dim, kernel_size=self.opt.kernel_size, stride=2, padding=1),
+            nn.BatchNorm2d(pre_layer_dim),
+            nn.LeakyReLU(negative_slope=0.2),
         ])
         self.block_size = len(block)
         self.fromRGB_new = EqualConv2d(3, self.cur_layer_dim, (1, 1), bias=True)
@@ -287,7 +281,8 @@ class PSGAN_Discriminator(nn.Module):
 
         for layer in self.layers:
             x = layer(x)
-
+            
+        x = x.view(x.shape[0], -1)
         return x
 
     def transition_forward(self, x, alpha):
@@ -305,6 +300,7 @@ class PSGAN_Discriminator(nn.Module):
         for layer in self.layers[self.block_size:]:
             x = layer(x)
 
+        x = x.view(x.shape[0], -1)
         return x
 
     def end_transition(self):

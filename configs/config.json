@@ -19,8 +19,8 @@
 
     "batch_size": 25,
     "epochs": 2500,
-    "lr_d": 0.00001,
-    "lr_g": 0.00001,
+    "lr_d": 0.0002,
+    "lr_g": 0.0002,
     "g_it": 1,
     "d_it": 1,
     "b1": 0.5,
@@ -28,5 +28,6 @@
     "eps_drift": 0.001,
     "lambda_coff": 10.0,
     "MSE_coff": 1.0,
-    "adv_coff": 0.1
+    "adv_coff": 0.1,
+    "loss": "BCE"
 }

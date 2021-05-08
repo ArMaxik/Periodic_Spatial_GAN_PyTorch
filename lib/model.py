@@ -64,6 +64,31 @@ class PSGAN():
         # DataParallel
         self.gen = nn.DataParallel(self.gen, device_ids=self.opt.device_ids)
         self.dis = nn.DataParallel(self.dis, device_ids=self.opt.device_ids)
+        
+        # self.gen.module.add_block()
+        # self.dis.module.add_block()
+        # self.gen.module.to(self.opt.device)
+        # self.dis.module.to(self.opt.device)
+        # self.dis.module.end_transition()
+        # self.gen.module.end_transition()
+
+        # self.gen.module.add_block()
+        # self.dis.module.add_block()
+        # self.gen.module.to(self.opt.device)
+        # self.dis.module.to(self.opt.device)
+        # self.dis.module.end_transition()
+        # self.gen.module.end_transition()
+
+        # self.gen.module.add_block()
+        # self.dis.module.add_block()
+        # self.gen.module.to(self.opt.device)
+        # self.dis.module.to(self.opt.device)
+        # self.dis.module.end_transition()
+        # self.gen.module.end_transition()
+
+        # tqdm.write(f"GENERATOR")
+        # for l in self.gen.module.layers:
+        #     tqdm.write(f"{l}")
 
     def train(self):
         print("Training started")
@@ -258,28 +283,37 @@ class PSGAN():
         gradients = gradients.view(b, -1)
 
         penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
-        tqdm.write(f"{penalty.min()} {penalty.max()}")
         return self.opt.lambda_coff * penalty
 
     def _train_discriminator(self):
         self.op_dis.zero_grad()
         ### Train with real images
-        d_real_out = self.dis(self.data_device, self.alpha)[0]
+        d_real_out = self.dis(self.data_device, self.alpha)
 
         ### Train with fake images
         # Generate fake images
         Z_l, Z_g = self.generate_noise(self.current_batch)
         imgs_fake = self.gen(Z_l, Z_g, self.data_device, self.alpha)
         # Calculate gradient
-        d_fake_out = self.dis(imgs_fake, self.alpha)[0]
+        d_fake_out = self.dis(imgs_fake, self.alpha)
         
         # tqdm.write(f"{d_fake_out.mean()} + {d_real_out.mean()} + {self._gradien_penalty(self.data_device, imgs_fake)}")
 
-        gp = self._gradien_penalty(self.data_device, imgs_fake)
-        d_real_out = d_real_out.view(-1).mean()
-        d_fake_out = d_fake_out.view(-1).mean()
-        self.d_loss = d_fake_out - d_real_out + gp
-        self.d_loss += self.opt.eps_drift * torch.mean(d_real_out ** 2)
+        if self.opt.loss == "WGAN":
+            gp = self._gradien_penalty(self.data_device, imgs_fake)
+            d_real_out = d_real_out.view(-1).mean()
+            d_fake_out = d_fake_out.view(-1).mean()
+            self.d_loss = d_fake_out - d_real_out + gp
+            self.d_loss += self.opt.eps_drift * torch.mean(d_real_out ** 2)
+        else:
+            # Otherwise using BCELoss by default
+            d_real_loss = self.criterion(d_real_out, self.real_label)
+            d_fake_loss = self.criterion(d_fake_out, self.fake_label)
+
+            self.d_loss = (d_fake_loss + d_real_loss) / 2
+            self.d_loss /= self.opt.spatial_size * self.opt.spatial_size
+
+
         self.d_loss.backward()
         # Optimize weights
         self.op_dis.step()
@@ -293,7 +327,12 @@ class PSGAN():
         g_fake_out = self.dis(imgs_fake, self.alpha)
         # _, prelast_layer_real = self.dis(self.data_device, self.alpha)
         
-        self.g_loss = -g_fake_out.view(-1).mean()
+        if self.opt.loss == "WGAN":
+            self.g_loss = -g_fake_out.view(-1).mean()
+        else:
+            # Otherwise using BCELoss by default
+            self.g_loss = self.criterion(g_fake_out, self.real_label)
+            self.g_loss /= self.opt.spatial_size * self.opt.spatial_size
         # self.g_loss += self.MSEloss(imgs_fake, self.data_device) * self.opt.MSE_coff
         # self.g_loss += self.MSEloss(prelast_layer_fake, prelast_layer_real) * self.opt.adv_coff
         self.g_loss.backward()
