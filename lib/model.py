@@ -202,16 +202,34 @@ class PSGAN():
         # Generate fake images
         Z_l, Z_g = self.generate_noise(self.current_batch)
         imgs_fake = self.gen(Z_l, Z_g, self.data_device)
-        # Calculate gradient
-        g_fake_out, prelast_layer_fake = self.dis(imgs_fake)
-        _, prelast_layer_real = self.dis(self.data_device)
+        
+        g_fake_out, style_act_fake = self.dis(imgs_fake)
+        _, style_act_real = self.dis(self.data_device)
+        # Loss
         self.g_loss = self.criterion(g_fake_out, self.real_label)
         self.g_loss /= self.opt.spatial_size * self.opt.spatial_size
         self.g_loss += self.MSEloss(imgs_fake, self.data_device) * self.opt.MSE_coff
-        self.g_loss += self.MSEloss(prelast_layer_fake, prelast_layer_real) * self.opt.adv_coff
+        self.g_loss += self._style_loss(style_act_fake, style_act_real) * self.opt.style_coff
         self.g_loss.backward()
         # Optimize weights
         self.op_gen.step()
+
+    def _style_loss(self, act_fake, act_real):
+        style_loss = 0.0
+        for (f, r) in zip(act_fake, act_real):
+            style_loss += torch.sum((self._gram_matrix(f) - self._gram_matrix(r)) ** 2)
+        return style_loss
+
+    def _gram_matrix(self, input):
+        b, c, h, w = input.shape  
+
+        features = input.view(b * c, h * w)
+
+        G = torch.mm(features, features.t())  # compute the gram product
+
+        # we 'normalize' the values of the gram matrix
+        # by dividing by the number of element in each feature maps.
+        return G.div(b * c * h * w)
 
     def _save_weights(self):
         g_w = self.gen.state_dict()

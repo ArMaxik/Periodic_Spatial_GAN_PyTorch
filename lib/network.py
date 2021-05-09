@@ -26,7 +26,9 @@ class PSGAN_Generator(nn.Module):
         layers.append(nn.Tanh())
 
         self.gen = nn.Sequential(*layers)
-        self._init_coder()
+        # Coder
+        if self.opt.image_coder_dim > 0:
+            self._init_coder()
 
         self.apply(weights_init)
 
@@ -66,12 +68,15 @@ class PSGAN_Generator(nn.Module):
         assert Z_l.shape[1] == self.opt.local_noise_dim
         # assert Z_g.shape[1] == self.opt.global_noise_dim
         # Z coder
-        Z_c = self.cod(imgs)
-        Z_c = self.cod_l1(Z_c.view(Z_c.shape[0], -1))
-        Z_c = self.cod_leaky(Z_c)
-        Z_c = self.cod_l2(Z_c)
-        Z_c = self.cod_tanh(Z_c)
-        Z_c = self._expand_Z_c(Z_c, spatial_size)
+        Z_cat = []
+        if self.opt.image_coder_dim > 0:
+            Z_c = self.cod(imgs)
+            Z_c = self.cod_l1(Z_c.view(Z_c.shape[0], -1))
+            Z_c = self.cod_leaky(Z_c)
+            Z_c = self.cod_l2(Z_c)
+            Z_c = self.cod_tanh(Z_c)
+            Z_c = self._expand_Z_c(Z_c, spatial_size)
+            Z_cat.append(Z_c)
         # Z local
         # Z_l = self.cod(imgs)
         # Z global
@@ -79,9 +84,9 @@ class PSGAN_Generator(nn.Module):
         # Z_g = self._expand_Z_g(Z_g)
         # Z pereodic
         Z_p = self._z_p_gen(Z_g, spatial_size)
+        Z_cat.extend([Z_l, Z_g, Z_p])
         # Summarized Z
-        # print("\n"*3, Z_c.shape, Z_l.shape, Z_g.shape, Z_p.shape,"\n"*3)
-        Z = torch.cat((Z_c, Z_l, Z_g, Z_p), dim=1)
+        Z = torch.cat(Z_cat, dim=1)
 
         x = self.gen(Z)
         return x
@@ -128,13 +133,13 @@ class PSGAN_Discriminator(nn.Module):
 
     def forward(self, x):
         # x = self.dis(x)
-        for layer in self.layers[:-2]:
+        style_activations = []
+        for layer in self.layers:
             x = layer(x)
-        adv_loss_x = x
-        for layer in self.layers[-2:]:
-            x = layer(x)
+            style_activations.append(x)
+
         x = x.view(x.shape[0], -1)
-        return (x, adv_loss_x)
+        return (x, style_activations)
 
 def weights_init(m):
     classname = m.__class__.__name__
