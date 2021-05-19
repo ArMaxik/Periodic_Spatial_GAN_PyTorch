@@ -75,6 +75,12 @@ class PSGAN():
         epochs = tqdm(range(self.opt.epochs), ncols=100, desc="train")
 
         for epoch in epochs:
+            if epoch % self.opt.lr_decay == 0:
+                self.opt.lr_g /= 10
+                self.opt.lr_d /= 10
+                self.op_gen = torch.optim.Adam(self.gen.parameters(), lr=self.opt.lr_g, weight_decay=1e-8, betas=(self.opt.b1, self.opt.b2))
+                self.op_dis = torch.optim.Adam(self.dis.parameters(), lr=self.opt.lr_d, weight_decay=1e-8, betas=(self.opt.b1, self.opt.b2))
+
             self._train_one_epoch()
             
             self._make_stat(epoch)

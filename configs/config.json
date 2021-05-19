@@ -1,5 +1,5 @@
 {
-    "exp_name": "PSGAN_58_exp",
+    "exp_name": "PSGAN_77_exp_500",
     "out_folder": "./out",
     "weights": "",
     "gen_conv_channels": [512, 256, 128, 64, 3],
@@ -7,24 +7,25 @@
     "local_noise_dim": 40,
     "global_noise_dim": 20,
     "periodic_noise_dim": 3,
-    "image_coder_dim": 0,
+    "image_coder_dim": 5,
     "hidden_noise_dim": 60,
     "kernel_size": 4,
-    "spatial_size": 10,
+    "spatial_size": 6,
 
-    "dataset": "/raid/veliseev/datasets/textures/",
+    "dataset": "/raid/veliseev/datasets/dtd/images/",
     "image_list": [
-        "Test2"
+        "water"
     ],
 
     "batch_size": 25,
-    "epochs": 10000,
-    "lr_d": 0.00005,
+    "epochs": 40000,
+    "lr_decay": 20000,
+    "lr_d": 0.0002,
     "lr_g": 0.0002,
     "g_it": 1,
     "d_it": 1,
     "b1": 0.5,
     "b2": 0.999,
-    "MSE_coff": 0.2,
-    "style_coff": 0.0
+    "MSE_coff": 0.0,
+    "style_coff": 0.00001
 }

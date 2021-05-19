@@ -7,6 +7,7 @@ import torchvision.transforms as transforms
 import torch.utils.data as data
 
 from PIL import Image
+from torchvision.transforms.transforms import Resize
 
 from tqdm import tqdm
 
@@ -141,6 +142,7 @@ def get_loader(data_set, batch_size, shuffle, num_workers):
 
 def get_dtd_data_loader(args, img_size, batch_size):
     transform = transforms.Compose([
+                                    transforms.Resize(500),
                                     transforms.RandomCrop(img_size),
                                     # transforms.RandomHorizontalFlip(),
                                     transforms.ToTensor(),
